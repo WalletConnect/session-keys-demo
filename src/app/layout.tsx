@@ -3,6 +3,7 @@ import { Inter as FontSans } from 'next/font/google'
 import './globals.css'
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
+import { Toaster } from '@/components/ui/toaster'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -25,6 +26,7 @@ export default function RootLayout({
       <body className={cn('min-h-screen bg-background font-sans antialiased', fontSans.variable)}>
         <ThemeProvider attribute="class" defaultTheme="dark">
           <div className="flex items-center justify-center h-screen">{children}</div>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
