@@ -18,12 +18,19 @@ function useLocalStorageState<T>(key: string, initialValue: T): [T, React.Dispat
   
       // this naive hook might write 'undefined' or 'null' to local storage as a string
       if (storedValue && storedValue !== 'undefined' && storedValue !== 'null') {
-       setState(JSON.parse(storedValue) as T)
+        try {
+          setState(JSON.parse(storedValue) as T)
+        } catch {
+          setState(storedValue as T)
+        }
+
       }
   },[key])
 
   useEffect(() => {
-    setItem(key, state)
+    if (state) {
+      setItem(key, state)
+    }
   }, [key, state])
 
   return [state, setState]

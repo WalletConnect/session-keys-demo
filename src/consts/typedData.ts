@@ -45,11 +45,9 @@ export const permissionsDomain = {
   export const permissionsTypes = {
     PermissionRequest: [
       { name: 'targetAddress', type: 'address' },
-      { name: 'type', type: 'string' }
     ],
   } as const
 
   export const permissionsMessage = {
     targetAddress: '0x9DaEC368Fa54279a43ADb4d5F5282B55B33D7392',
-    type: 'eth_getPermissions_v1'
   } as const

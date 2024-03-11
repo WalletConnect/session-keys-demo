@@ -22,6 +22,10 @@ function setItem<T>(key: string, value: T) {
   function getItem(key: string): string | null {
     return localStorage.getItem(key)
   }
+
+  function removeItem(key: string){
+    localStorage.removeItem(key)
+  }
   
-  export { setItem, getItem }
+  export { setItem, getItem, removeItem }
   
