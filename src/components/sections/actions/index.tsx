@@ -29,7 +29,22 @@ export default function ActionsSection() {
       const serializedSessionKey = await signTypedDataAsync({
         domain: permissionsDomain,
         message: {
-          targetAddress
+          targetAddress,
+          //@ts-ignore
+          scope: [
+            {
+              description: 'Interact with Donut contract'
+            },
+            {
+              description: 'Spend up to 0.5 ETH in a transaction'
+            },
+            {
+              description: 'Maximum of 5 ETH spent per 30 days'
+            },
+            {
+              description: 'Session key valid for 7 days'
+            }
+          ]
         },
         primaryType: 'PermissionRequest',
         types: permissionsTypes

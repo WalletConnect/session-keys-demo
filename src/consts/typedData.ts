@@ -46,6 +46,12 @@ export const permissionsDomain = {
     PermissionRequest: [
       { name: 'targetAddress', type: 'address' },
     ],
+    PermissionAction: [
+      { name: 'description', type: 'string' }
+    ],
+    PermissionScope: [
+      { name: 'scope', type: 'PermissionAction[]' } 
+    ]
   } as const
 
   export const permissionsMessage = {
