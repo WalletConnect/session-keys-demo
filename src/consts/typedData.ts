@@ -45,6 +45,7 @@ export const permissionsDomain = {
   export const permissionsTypes = {
     PermissionRequest: [
       { name: 'targetAddress', type: 'address' },
+      { name: 'permissions', type: 'string' }
     ],
     PermissionAction: [
       { name: 'description', type: 'string' }

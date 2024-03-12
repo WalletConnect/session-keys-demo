@@ -22,6 +22,16 @@ export default function ActionsSection() {
 
   async function onRequestPermissions() {
     try {
+      const permissions = [
+        {
+          target: donutContractaddress,
+          abi: donutContractAbi,
+          valueLimit: parseEther('10'),
+          // @ts-ignore
+          functionName: 'purchase'
+        }
+      ]
+
       const targetAddress = signer?.address
       if (!targetAddress) {
         throw new Error('Local signer not initialized')
@@ -30,6 +40,7 @@ export default function ActionsSection() {
         domain: permissionsDomain,
         message: {
           targetAddress,
+          permissions: JSON.stringify(permissions),
           //@ts-ignore
           scope: [
             {
