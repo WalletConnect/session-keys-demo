@@ -1,6 +1,6 @@
 import { Button } from '../../ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card'
-import { useSignTypedData, useWriteContract } from 'wagmi'
+import { useSignTypedData, useWriteContract, useWalletClient } from 'wagmi'
 import { useToast } from '../../ui/use-toast'
 import { parseEther } from 'viem'
 import { donutContractAbi, donutContractaddress } from '@/consts/contract'
@@ -20,8 +20,29 @@ export default function ActionsSection() {
   )
   const { signer } = useLocalSigner()
 
+  const { data: walletClient } = useWalletClient()
+
   async function onRequestPermissions() {
     try {
+      type GetPermissionsSchema = {
+        Parameters: [type: string]
+        ReturnType: {
+          success: boolean
+        }
+      }
+
+      const res = await walletClient?.request<GetPermissionsSchema>({
+        method: 'eth_getPermissions_v1',
+        params: ['test']
+      })
+
+      // const res = await walletClient?.sendTransaction({
+      //   to: '0xD8Ea779b8FFC1096CA422D40588C4c0641709890',
+      //   value: parseEther('0.0001')
+      // })
+
+      console.log('Response', res)
+
       const permissions = [
         {
           target: donutContractaddress,
@@ -36,33 +57,34 @@ export default function ActionsSection() {
       if (!targetAddress) {
         throw new Error('Local signer not initialized')
       }
-      const serializedSessionKey = await signTypedDataAsync({
-        domain: permissionsDomain,
-        message: {
-          targetAddress,
-          permissions: JSON.stringify(permissions),
-          //@ts-ignore
-          scope: [
-            {
-              description: 'Interact with Donut contract'
-            },
-            {
-              description: 'Spend up to 0.5 ETH in a transaction'
-            },
-            {
-              description: 'Maximum of 5 ETH spent per 30 days'
-            },
-            {
-              description: 'Session key valid for 7 days'
-            }
-          ]
-        },
-        primaryType: 'PermissionRequest',
-        types: permissionsTypes
-      })
-      toast({ title: 'Success', description: 'Permissions granted successfully' })
-      console.log('Permissions granted successfully', { serializedSessionKey })
-      setSessionKey(serializedSessionKey)
+
+      // const serializedSessionKey = await signTypedDataAsync({
+      //   domain: permissionsDomain,
+      //   message: {
+      //     targetAddress,
+      //     permissions: JSON.stringify(permissions),
+      //     //@ts-ignore
+      //     scope: [
+      //       {
+      //         description: 'Interact with Donut contract'
+      //       },
+      //       {
+      //         description: 'Spend up to 0.5 ETH in a transaction'
+      //       },
+      //       {
+      //         description: 'Maximum of 5 ETH spent per 30 days'
+      //       },
+      //       {
+      //         description: 'Session key valid for 7 days'
+      //       }
+      //     ]
+      //   },
+      //   primaryType: 'PermissionRequest',
+      //   types: permissionsTypes
+      // })
+      // toast({ title: 'Success', description: 'Permissions granted successfully' })
+      // console.log('Permissions granted successfully', { serializedSessionKey })
+      // setSessionKey(serializedSessionKey)
     } catch (error) {
       toast({
         title: 'Error',
