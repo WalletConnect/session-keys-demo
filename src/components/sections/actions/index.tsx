@@ -25,10 +25,10 @@ export default function ActionsSection() {
   async function handleBuildUserOp() {
     const nonce = await getNonce()
     console.log('getNonce', { nonce })
-    // const callData = await getCallData()
-    // console.log('getNonce', { callData })
+    const callData = await getCallData()
+    console.log('getCallData', { callData })
     const signature = await getSignature()
-    console.log('getNonce', { signature })
+    console.log('getSignature', { signature })
   }
 
   async function onRequestPermissions() {

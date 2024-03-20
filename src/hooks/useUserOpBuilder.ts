@@ -37,20 +37,19 @@ export const useUserOpBuilder = () => {
 
     const getCallData = async () => {
 
-        let execution = concat([
-            '0x32e5033875F1744a6E85bCCf96625482E4295Cf5',
-            numberToHex(123),
-            // DAI Transfer to random address
-            '0xa9059cbb000000000000000000000000aabbccddeeff00112233aabbccddeeff0011223300000000000000000000000000000000000000000000000002c68af0bb140000'
-        ])
-        
         return readContract(config, {
             abi: BUILDER_CONTRACT_ABI,
             address: BUILDER_CONTRACT_ADDRESS,
             functionName: 'getCallDataWithContext',
             args: [
                 '0x32e5033875F1744a6E85bCCf96625482E4295Cf5',
-                [execution],
+                [{
+                    target: '0x32e5033875F1744a6E85bCCf96625482E4295Cf5',
+                    value: numberToHex(123),
+                    // DAI Transfer to random address
+                    callData: '0xa9059cbb000000000000000000000000aabbccddeeff00112233aabbccddeeff0011223300000000000000000000000000000000000000000000000002c68af0bb140000'
+                
+                }],
                 permissionContext
             ]
         })
@@ -65,7 +64,17 @@ export const useUserOpBuilder = () => {
             functionName: 'getSignatureWithContext',
             args: [
                 '0x32e5033875F1744a6E85bCCf96625482E4295Cf5',
-                userOp,
+                {
+                    sender: userOp.sender,
+                    nonce: userOp.nonce,
+                    initCode: userOp.initCode,
+                    callData: userOp.callData,
+                    accountGasLimits: '0x000000000000000000000000001e8480000000000000000000000000001e8480', // V7
+                    preVerificationGas: userOp.preVerificationGas, 
+                    gasFees: '0x000000000000000000000000001e8480000000000000000000000000001e8480', // V7
+                    paymasterAndData: userOp.paymasterAndData,
+                    signature: userOp.signature
+                },
                 permissionContext
             ]
         })

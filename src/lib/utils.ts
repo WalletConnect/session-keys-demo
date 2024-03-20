@@ -51,7 +51,7 @@ export function getRandomBytes(n: number){
   const QUOTA = 65536
   var a = new Uint8Array(n);
   for (var i = 0; i < n; i += QUOTA) {
-    self.crypto.getRandomValues(a.subarray(i, i + Math.min(n - i, QUOTA)));
+    crypto.getRandomValues(a.subarray(i, i + Math.min(n - i, QUOTA)));
   }
   return a;
 }
