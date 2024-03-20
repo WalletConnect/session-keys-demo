@@ -9,6 +9,7 @@ import { SESSIONKEY_LOCALSTORAGE_KEY } from '@/consts/storage'
 import { useLocalStorageState } from '@/hooks/useLocalStorageState'
 import BasicActions from './basic'
 import { useLocalSigner } from '@/hooks/useLocalSigner'
+import { useUserOpBuilder } from '@/hooks/useUserOpBuilder'
 
 export default function ActionsSection() {
   const { toast } = useToast()
@@ -19,6 +20,16 @@ export default function ActionsSection() {
     undefined
   )
   const { signer } = useLocalSigner()
+  const { getNonce, getCallData, getSignature } = useUserOpBuilder()
+
+  async function handleBuildUserOp() {
+    const nonce = await getNonce()
+    console.log('getNonce', { nonce })
+    // const callData = await getCallData()
+    // console.log('getNonce', { callData })
+    const signature = await getSignature()
+    console.log('getNonce', { signature })
+  }
 
   async function onRequestPermissions() {
     try {
@@ -105,6 +116,9 @@ export default function ActionsSection() {
 
           <CardTitle className="col-span-2 my-3">Donut contract</CardTitle>
           <Button onClick={onPurchase}>Purchase</Button>
+
+          <CardTitle className="col-span-2 my-3">Custom</CardTitle>
+          <Button onClick={handleBuildUserOp}> Build UserOp</Button>
         </CardContent>
       </Card>
     </>
