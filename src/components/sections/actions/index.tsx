@@ -2,7 +2,7 @@ import { Button } from '../../ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card'
 import { useSignTypedData, useWriteContract } from 'wagmi'
 import { useToast } from '../../ui/use-toast'
-import { parseEther } from 'viem'
+import { Hex, numberToHex, parseEther, toHex } from 'viem'
 import { donutContractAbi, donutContractaddress } from '@/consts/contract'
 import { permissionsDomain, permissionsTypes } from '@/consts/typedData'
 import { SESSIONKEY_LOCALSTORAGE_KEY } from '@/consts/storage'
@@ -10,6 +10,7 @@ import { useLocalStorageState } from '@/hooks/useLocalStorageState'
 import BasicActions from './basic'
 import { useLocalSigner } from '@/hooks/useLocalSigner'
 import { useUserOpBuilder } from '@/hooks/useUserOpBuilder'
+import { PermissionBuilderSampleData, getRandomBytes } from '@/lib/utils'
 
 export default function ActionsSection() {
   const { toast } = useToast()
@@ -23,11 +24,23 @@ export default function ActionsSection() {
   const { getNonce, getCallData, getSignature } = useUserOpBuilder()
 
   async function handleBuildUserOp() {
-    const nonce = await getNonce()
+    const permissionContext = toHex(getRandomBytes(20))
+    const nonce = await getNonce({
+      permissionContext,
+      address: PermissionBuilderSampleData.address
+    })
     console.log('getNonce', { nonce })
-    const callData = await getCallData()
+    const callData = await getCallData({
+      permissionContext,
+      address: PermissionBuilderSampleData.address,
+      executions: PermissionBuilderSampleData.executions
+    })
     console.log('getCallData', { callData })
-    const signature = await getSignature()
+    const signature = await getSignature({
+      address: PermissionBuilderSampleData.address,
+      userOp: PermissionBuilderSampleData.packedUserOpV7,
+      permissionContext
+    })
     console.log('getSignature', { signature })
   }
 
