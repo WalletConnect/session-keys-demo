@@ -22,15 +22,15 @@ type GetCallDataArgs = {
 } & BaseArgs
 
 type PackedUserOp = {
-    sender: string,
-    nonce: string,
-    initCode: string,
-    callData: string,
-    accountGasLimits: string,
-    preVerificationGas: string,
-    gasFees: string,
-    paymasterAndData: string,
-    signature: string
+    sender: Hex,
+    nonce: Hex,
+    initCode: Hex,
+    callData: Hex,
+    accountGasLimits: Hex,
+    preVerificationGas: Hex,
+    gasFees: Hex,
+    paymasterAndData: Hex,
+    signature: Hex
 }
 
 type GetSignatureArgs = {
