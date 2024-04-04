@@ -33,7 +33,8 @@ export default function BasicActions() {
     try {
       const hash = await sendTransactionAsync({
         to: '0xD8Ea779b8FFC1096CA422D40588C4c0641709890',
-        value: parseEther('0.0001')
+        value: parseEther('0.0001'),
+        data:'0x'
       })
       toast({
         title: 'Success',
