@@ -12,6 +12,7 @@ import { useState } from 'react'
 import { signWithPasskey } from '@/core/passkeys'
 import usePasskey from '@/hooks/usePasskey'
 import { removeItem } from '@/core/storage'
+import { ENTRYPOINT_ADDRESS_V07 } from 'permissionless'
 
 export default function SessionKeySection() {
   const [sessionKey, setSessionKey] = useLocalStorageState<string | undefined>(
@@ -31,9 +32,16 @@ export default function SessionKeySection() {
       if (!sessionKey) {
         throw new Error('Session key not available')
       }
+      if (!signer) throw new Error('Local Signer not available')
       const publicClient = createPublicBundlerClient()
-      const sessionKeyAccount = await deserializeSessionKeyAccount(publicClient, sessionKey, signer)
-      const kernelClient = createKernelClient(sessionKeyAccount)
+      const entryPoint = ENTRYPOINT_ADDRESS_V07
+      const sessionKeyAccount = await deserializeSessionKeyAccount(
+        publicClient,
+        entryPoint,
+        sessionKey,
+        signer
+      )
+      const kernelClient = createKernelClient(sessionKeyAccount!)
 
       console.log('KERNEL CLIENT CREATED', kernelClient.account.address)
       const hash = await kernelClient.writeContract({
@@ -73,8 +81,14 @@ export default function SessionKeySection() {
       }
 
       const publicClient = createPublicBundlerClient()
-      const sessionKeyAccount = await deserializeSessionKeyAccount(publicClient, sessionKey, signer)
-      const kernelClient = createKernelClient(sessionKeyAccount)
+      const entryPoint = ENTRYPOINT_ADDRESS_V07
+      const sessionKeyAccount = await deserializeSessionKeyAccount(
+        publicClient,
+        entryPoint,
+        sessionKey,
+        signer
+      )
+      const kernelClient = createKernelClient(sessionKeyAccount!)
 
       console.log('KERNEL CLIENT CREATED', kernelClient.account.address)
       const hash = await kernelClient.writeContract({

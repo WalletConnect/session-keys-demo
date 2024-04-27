@@ -5,27 +5,26 @@
  * @template T - The type of the value being stored.
  */
 function setItem<T>(key: string, value: T) {
-    // to prevent silly mistakes with double stringifying
-    if (typeof value === 'string') {
-      localStorage.setItem(key, value)
-    } else {
-      localStorage?.setItem(key, JSON.stringify(value))
-    }
+  // to prevent silly mistakes with double stringifying
+  if (typeof value === 'string') {
+    localStorage.setItem(key, value)
+  } else {
+    localStorage?.setItem(key, JSON.stringify(value))
   }
-  
-  /**
-   * Retrieves the value associated with the specified key from the local storage.
-   *
-   * @param key - The key of the item to retrieve.
-   * @returns The value associated with the key, or null if the key does not exist.
-   */
-  function getItem(key: string): string | null {
-    return localStorage.getItem(key)
-  }
+}
 
-  function removeItem(key: string){
-    localStorage.removeItem(key)
-  }
-  
-  export { setItem, getItem, removeItem }
-  
+/**
+ * Retrieves the value associated with the specified key from the local storage.
+ *
+ * @param key - The key of the item to retrieve.
+ * @returns The value associated with the key, or null if the key does not exist.
+ */
+function getItem(key: string): string | null {
+  return localStorage.getItem(key)
+}
+
+function removeItem(key: string) {
+  localStorage.removeItem(key)
+}
+
+export { setItem, getItem, removeItem }

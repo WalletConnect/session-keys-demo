@@ -17,7 +17,7 @@ const metadata = {
 
 // Create wagmiConfig
 export const config = defaultWagmiConfig({
-  chains: [ sepolia], // required
+  chains: [sepolia], // required
   projectId, // required
   metadata, // required
   ssr: true,
@@ -25,7 +25,7 @@ export const config = defaultWagmiConfig({
     storage: cookieStorage
   }),
   enableWalletConnect: true, // Optional - true by default
-  enableInjected: false, 
-  enableEIP6963: false, 
-  enableCoinbase: false, 
+  enableInjected: false,
+  enableEIP6963: false,
+  enableCoinbase: false
 })
