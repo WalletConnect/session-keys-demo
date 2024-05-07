@@ -19,7 +19,6 @@ import { permissionsDomain, permissionsTypes } from '@/consts/typedData'
 import { useState } from 'react'
 import {
   ENTRYPOINT_ADDRESS_V07,
-  GetUserOperationReceiptReturnType,
   createBundlerClient,
   getPackedUserOperation,
   getUserOperationHash
@@ -28,13 +27,10 @@ import { pimlicoBundlerActions } from 'permissionless/actions/pimlico'
 import { UserOperation } from 'permissionless/types'
 import { sign } from 'viem/accounts'
 import { sepolia } from 'viem/chains'
-import {
-  PermissionContext,
-  getCallDataWithContext,
-  getNonceWithContext,
-  getSignatureWithContext
-} from '@/lib/safe7579AccountUtils'
-import { isModuleInstalledAbi } from '@/lib/safe7579AccountUtils/abis/Account'
+import { KernelV3AccountUtils } from '@/lib/kernelV3AccountUtils'
+import { isModuleInstalledAbi } from '@/lib/kernelV3AccountUtils/abis/Account'
+import { Safe7579AccountUtils } from '@/lib/safe7579AccountUtils'
+import { PermissionContext, UserOpBuilderAccountUtil } from '@/lib/UserOpBuilderAccountUtils'
 
 export default function LocalPrivateKeySection() {
   const { isConnected } = useAccount()
@@ -92,36 +88,35 @@ export default function LocalPrivateKeySection() {
 
     const paymasterUrl = `https://api.pimlico.io/v2/sepolia/rpc?apikey=${apiKey}`
 
-    const { accountAddress, permissionValidatorAddress } = permissionContext
+    const { accountAddress, permissionValidatorAddress, accountType } = permissionContext
 
     const testDappPrivateKey = signerPrivateKey! as `0x${string}`
     const dappAccount = signer!
     console.log('dappAccount(permitted Signer) Address: ', dappAccount.address)
 
-    const isModuleInstalled = await publicClient.readContract({
-      address: accountAddress,
-      abi: isModuleInstalledAbi,
-      functionName: 'isModuleInstalled',
-      args: [
-        BigInt(1), // ModuleType
-        permissionValidatorAddress, // Module Address
-        '0x' // Additional Context
-      ]
-    })
-    console.log(`isModuleInstalled : ${isModuleInstalled}`)
+    let userOpBuilderAccountUtil: UserOpBuilderAccountUtil
 
-    const nonce = await getNonceWithContext(publicClient, {
+    if (accountType === 'KernelV3') {
+      userOpBuilderAccountUtil = new KernelV3AccountUtils()
+    } else {
+      userOpBuilderAccountUtil = new Safe7579AccountUtils()
+    }
+    const actions = [{ target: to, value: value, callData: data }]
+
+    const nonce = await userOpBuilderAccountUtil.getNonceWithContext(publicClient, {
       sender: accountAddress,
       entryPoint,
       permissionValidatorAddress
     })
-    const actions = [{ target: to, value: value, callData: data }]
-    const callData = await getCallDataWithContext(permissionContext, actions)
+    const callData = await userOpBuilderAccountUtil.getCallDataWithContext(publicClient, {
+      permissionContext,
+      actions
+    })
     console.log('PermissionValidator Nonce: ', nonce)
 
     const gasPrice = await bundlerClient.getUserOperationGasPrice()
     const userOp: UserOperation<'v0.7'> = {
-      sender: accountAddress,
+      sender: accountAddress.toLowerCase() as `0x${string}`,
       nonce: nonce,
       callData: callData,
       callGasLimit: BigInt(2000000),
@@ -131,12 +126,11 @@ export default function LocalPrivateKeySection() {
       maxPriorityFeePerGas: gasPrice.fast.maxPriorityFeePerGas,
       signature: '0x'
     }
-    console.log('Partial userOperation :', userOp)
+    console.log('Partial userOperation to get userOpHash :', userOp)
 
     const userOpHash = getUserOperationHash({
       userOperation: {
-        ...userOp,
-        signature: '0x'
+        ...userOp
       },
       entryPoint: entryPoint,
       chainId: sepolia.id
@@ -148,26 +142,31 @@ export default function LocalPrivateKeySection() {
       hash: userOpHash
     })
     const rawSignature = signatureToHex(dappSignatureOnUserOp)
-    console.log(rawSignature)
+    console.log('Raw signature on UserOpHash: ', rawSignature)
 
-    const finalSigForValidator = await getSignatureWithContext(rawSignature, permissionContext)
+    const finalSigForValidator = await userOpBuilderAccountUtil.getSignatureWithContext(
+      publicClient,
+      {
+        rawSignature,
+        permissionContext,
+        userOperation: userOp
+      }
+    )
 
     userOp.signature = finalSigForValidator
-    console.log(userOp)
+    console.log('Final UserOp to send', userOp)
 
     const packedUserOp = getPackedUserOperation(userOp)
-    console.log(packedUserOp)
+    console.log('Final Packed UserOp to send', JSON.stringify(packedUserOp))
 
     const _userOpHash = await bundlerClient.sendUserOperation({
       userOperation: userOp
     })
 
-    let txReceipt: GetUserOperationReceiptReturnType | null = null
-    while (txReceipt == null)
-      txReceipt = await bundlerClient.getUserOperationReceipt({
-        hash: _userOpHash
-      })
-    console.log(txReceipt.receipt.transactionHash)
+    let txReceipt = await bundlerClient.waitForUserOperationReceipt({
+      hash: _userOpHash
+    })
+
     return txReceipt.receipt.transactionHash
   }
 
@@ -245,7 +244,9 @@ export default function LocalPrivateKeySection() {
             <div className="flex flex-col gap-2">
               <p className="text-sm">{`${signer.address.substring(0, 5)}...${signer.address.substring(16, 22)}`}</p>
               <Button
-                disabled={isRequestPermissionLoading || permissionContext != undefined || !isConnected}
+                disabled={
+                  isRequestPermissionLoading || permissionContext != undefined || !isConnected
+                }
                 onClick={onRequestPermissions}
               >
                 {isRequestPermissionLoading ? (
@@ -269,7 +270,6 @@ export default function LocalPrivateKeySection() {
                 ) : (
                   <>Purchase Donut</>
                 )}
-                
               </Button>
               <Button
                 disabled={!permissionContext || isTransactionPending}
