@@ -5,13 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { useToast } from '@/components/ui/use-toast'
 import { useLocalSigner } from '@/hooks/useLocalSigner'
 import { donutContractAbi, donutContractaddress } from '@/consts/contract'
-import {
-  createPublicClient,
-  encodeFunctionData,
-  http,
-  parseEther,
-  signatureToHex
-} from 'viem'
+import { createPublicClient, encodeFunctionData, http, parseEther, signatureToHex } from 'viem'
 import { useAccount, useSignTypedData } from 'wagmi'
 import { permissionsDomain, permissionsTypes } from '@/consts/typedData'
 import { useState } from 'react'
@@ -35,7 +29,8 @@ export default function LocalPrivateKeySection() {
   const [isRequestPermissionLoading, setRequestPermissionLoading] = useState<boolean>(false)
   const [isTransactionPending, setTransactionPending] = useState<boolean>(false)
   const { signTypedDataAsync } = useSignTypedData()
-  const [issuePermissionsResponse, setIssuePermissionsResponse] = useState<IssuePermissionsResponse>()
+  const [issuePermissionsResponse, setIssuePermissionsResponse] =
+    useState<IssuePermissionsResponse>()
   const { toast } = useToast()
 
   const handleTxWithLocalKey = async () => {
@@ -48,11 +43,13 @@ export default function LocalPrivateKeySection() {
         args: [1]
       })
 
-      await buildAndSendTransactionsWithPermissions(issuePermissionsResponse, [{
-        target: donutContractaddress,
-        value: parseEther('0.0001'),
-        callData: callData
-      }])
+      await buildAndSendTransactionsWithPermissions(issuePermissionsResponse, [
+        {
+          target: donutContractaddress,
+          value: parseEther('0.0001'),
+          callData: callData
+        }
+      ])
       toast({
         title: 'Signing with local key successfully completed'
       })
@@ -85,34 +82,43 @@ export default function LocalPrivateKeySection() {
 
     const paymasterUrl = `https://api.pimlico.io/v2/sepolia/rpc?apikey=${apiKey}`
 
-    const { initCode , accountAddress, userOperationBuilder:userOpBuilderAddress, permissionsContext } = issuedPermissionsResponse
+    const {
+      initCode,
+      accountAddress,
+      userOperationBuilder: userOpBuilderAddress,
+      permissionsContext
+    } = issuedPermissionsResponse
 
     const testDappPrivateKey = signerPrivateKey! as `0x${string}`
     const dappAccount = signer!
     console.log('dappAccount(permitted Signer) Address: ', dappAccount.address)
 
     const userOperationBuilder = new UserOperationBuilder()
-    
+
     const nonce = await userOperationBuilder.getNonceWithContext(publicClient, {
-      userOpBuilderAddress:userOpBuilderAddress!,
+      userOpBuilderAddress: userOpBuilderAddress!,
       sender: accountAddress,
-      permissionsContext:permissionsContext!
+      permissionsContext: permissionsContext!
     })
 
-    console.log({nonce})
+    console.log({ nonce })
     const callData = await userOperationBuilder.getCallDataWithContext(publicClient, {
-      sender:accountAddress,
-      userOpBuilderAddress:userOpBuilderAddress!,
-      permissionsContext:permissionsContext!,
+      sender: accountAddress,
+      userOpBuilderAddress: userOpBuilderAddress!,
+      permissionsContext: permissionsContext!,
       actions
     })
-    console.log({callData})
+    console.log({ callData })
 
     const gasPrice = await bundlerClient.getUserOperationGasPrice()
     const userOp: UserOperation<'v0.7'> = {
       sender: accountAddress as `0x${string}`,
-      factory: initCode && initCode !== '0x' ? initCode.substring(0,42) as `0x${string}`:undefined,
-      factoryData: initCode && initCode !== '0x' ? `0x${initCode.substring(42)}` as `0x${string}`:undefined ,
+      factory:
+        initCode && initCode !== '0x' ? (initCode.substring(0, 42) as `0x${string}`) : undefined,
+      factoryData:
+        initCode && initCode !== '0x'
+          ? (`0x${initCode.substring(42)}` as `0x${string}`)
+          : undefined,
       nonce: nonce,
       callData: callData,
       callGasLimit: BigInt(2000000),
@@ -122,7 +128,7 @@ export default function LocalPrivateKeySection() {
       maxPriorityFeePerGas: gasPrice.fast.maxPriorityFeePerGas,
       signature: '0x'
     }
-    console.log('Partial userOperation to get userOpHash :', {userOp})
+    console.log('Partial userOperation to get userOpHash :', { userOp })
 
     const userOpHash = getUserOperationHash({
       userOperation: {
@@ -141,15 +147,12 @@ export default function LocalPrivateKeySection() {
     console.log('Raw signature on UserOpHash: ', rawSignature)
     userOp.signature = rawSignature
     const preSignaturePackedUserOp = getPackedUserOperation(userOp)
-    const finalSigForValidator = await userOperationBuilder.getSignatureWithContext(
-      publicClient,
-      {
-        sender:accountAddress,
-        permissionsContext: permissionsContext!,
-        userOperation: preSignaturePackedUserOp,
-        userOpBuilderAddress:userOpBuilderAddress!,
-      }
-    )
+    const finalSigForValidator = await userOperationBuilder.getSignatureWithContext(publicClient, {
+      sender: accountAddress,
+      permissionsContext: permissionsContext!,
+      userOperation: preSignaturePackedUserOp,
+      userOpBuilderAddress: userOpBuilderAddress!
+    })
 
     userOp.signature = finalSigForValidator
     console.log('Final UserOp to send', userOp)
@@ -215,7 +218,8 @@ export default function LocalPrivateKeySection() {
       console.log('Permissions granted successfully', {
         permissionsContext: serializedPermissionContext
       })
-      const issuedPermissionsResponse = serializedPermissionContext as unknown as IssuePermissionsResponse
+      const issuedPermissionsResponse =
+        serializedPermissionContext as unknown as IssuePermissionsResponse
       if (issuedPermissionsResponse) setIssuePermissionsResponse(issuedPermissionsResponse)
     } catch (error) {
       toast({
@@ -243,7 +247,9 @@ export default function LocalPrivateKeySection() {
               <p className="text-sm">{`${signer.address.substring(0, 5)}...${signer.address.substring(16, 22)}`}</p>
               <Button
                 disabled={
-                  isRequestPermissionLoading || issuePermissionsResponse !== undefined || !isConnected
+                  isRequestPermissionLoading ||
+                  issuePermissionsResponse !== undefined ||
+                  !isConnected
                 }
                 onClick={onRequestPermissions}
               >

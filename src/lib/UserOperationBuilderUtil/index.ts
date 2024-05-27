@@ -1,9 +1,4 @@
-import {
-  Chain,
-  Client,
-  Transport,
-  publicActions
-} from 'viem'
+import { Chain, Client, Transport, publicActions } from 'viem'
 import {
   IUserOperationBuilder,
   UserOpBuilderGetCallDataArguments,
@@ -13,24 +8,21 @@ import {
 import { getCallDataAbi, getNonceAbi, getSignatureAbi } from './abis/userOpBuilderAbi'
 
 export class UserOperationBuilder implements IUserOperationBuilder {
-  
   async getSignatureWithContext(
     client: Client<Transport, Chain | undefined>,
     args: UserOpBuilderGetSignatureArguments
   ) {
-    const { sender, permissionsContext,userOpBuilderAddress, userOperation } = args
+    const { sender, permissionsContext, userOpBuilderAddress, userOperation } = args
     const publicClient = client.extend(publicActions)
-    if(!userOpBuilderAddress) { throw  new Error("no userOpBuilder address provided.")}
+    if (!userOpBuilderAddress) {
+      throw new Error('no userOpBuilder address provided.')
+    }
 
     const sig = await publicClient.readContract({
       address: userOpBuilderAddress,
       abi: getSignatureAbi,
       functionName: 'getSignature',
-      args:[
-        sender,
-        userOperation,
-        permissionsContext
-      ]
+      args: [sender, userOperation, permissionsContext]
     })
     return sig
   }
@@ -41,16 +33,15 @@ export class UserOperationBuilder implements IUserOperationBuilder {
   ) {
     const { sender, permissionsContext, userOpBuilderAddress } = args
     const publicClient = client.extend(publicActions)
-    if(!userOpBuilderAddress) { throw  new Error("no userOpBuilder address provided.")}
-    
+    if (!userOpBuilderAddress) {
+      throw new Error('no userOpBuilder address provided.')
+    }
+
     return await publicClient.readContract({
       address: userOpBuilderAddress,
       abi: getNonceAbi,
       functionName: 'getNonce',
-      args:[
-        sender,
-        permissionsContext
-      ]
+      args: [sender, permissionsContext]
     })
   }
 
@@ -60,19 +51,17 @@ export class UserOperationBuilder implements IUserOperationBuilder {
   ) {
     const { sender, actions, permissionsContext, userOpBuilderAddress } = args
     const publicClient = client.extend(publicActions)
-    if(!userOpBuilderAddress) { throw  new Error("no userOpBuilder address provided.")}
+    if (!userOpBuilderAddress) {
+      throw new Error('no userOpBuilder address provided.')
+    }
 
-    const callDataFromUserOpBuilder =  await publicClient.readContract({
+    const callDataFromUserOpBuilder = await publicClient.readContract({
       address: userOpBuilderAddress,
       abi: getCallDataAbi,
       functionName: 'getCallData',
-      args:[
-        sender,
-        actions,
-        permissionsContext
-      ]
+      args: [sender, actions, permissionsContext]
     })
-    console.log({callDataFromUserOpBuilder})
+    console.log({ callDataFromUserOpBuilder })
 
     return callDataFromUserOpBuilder
   }

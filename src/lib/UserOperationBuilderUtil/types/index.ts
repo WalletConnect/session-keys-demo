@@ -1,8 +1,7 @@
 import { EntryPoint, PackedUserOperation } from 'permissionless/types'
 import { Address, Chain, Client, Transport } from 'viem'
 
-export interface IUserOperationBuilder{
-  
+export interface IUserOperationBuilder {
   getNonceWithContext(
     client: Client<Transport, Chain | undefined>,
     args: UserOpBuilderGetNonceArguments
@@ -26,10 +25,10 @@ export type Execution = {
 }
 
 export type UserOpBuilderGetSignatureArguments = {
-  sender:Address
+  sender: Address
   userOpBuilderAddress: Address
   userOperation: PackedUserOperation
-  permissionsContext : `0x${string}`
+  permissionsContext: `0x${string}`
 }
 export type UserOpBuilderGetNonceArguments = {
   sender: Address
