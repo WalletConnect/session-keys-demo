@@ -6,8 +6,6 @@ import { useToast } from '@/components/ui/use-toast'
 import { useLocalSigner } from '@/hooks/useLocalSigner'
 import { donutContractAbi, donutContractaddress } from '@/consts/contract'
 import {
-  Address,
-  Hex,
   createPublicClient,
   encodeFunctionData,
   http,
@@ -27,10 +25,9 @@ import { pimlicoBundlerActions } from 'permissionless/actions/pimlico'
 import { UserOperation } from 'permissionless/types'
 import { sign } from 'viem/accounts'
 import { sepolia } from 'viem/chains'
-import { KernelV3AccountUtils } from '@/lib/kernelV3AccountUtils'
-import { isModuleInstalledAbi } from '@/lib/kernelV3AccountUtils/abis/Account'
-import { Safe7579AccountUtils } from '@/lib/safe7579AccountUtils'
-import { PermissionContext, UserOpBuilderAccountUtil } from '@/lib/UserOpBuilderAccountUtils'
+import { IssuePermissionsResponse } from '@/lib/ERC7715/types'
+import { Execution } from '@/lib/UserOperationBuilderUtil/types'
+import { UserOperationBuilder } from '@/lib/UserOperationBuilderUtil'
 
 export default function LocalPrivateKeySection() {
   const { isConnected } = useAccount()
@@ -38,24 +35,24 @@ export default function LocalPrivateKeySection() {
   const [isRequestPermissionLoading, setRequestPermissionLoading] = useState<boolean>(false)
   const [isTransactionPending, setTransactionPending] = useState<boolean>(false)
   const { signTypedDataAsync } = useSignTypedData()
-  const [permissionContext, setPermissionContext] = useState<PermissionContext>()
+  const [issuePermissionsResponse, setIssuePermissionsResponse] = useState<IssuePermissionsResponse>()
   const { toast } = useToast()
 
   const handleTxWithLocalKey = async () => {
     setTransactionPending(true)
     try {
-      if (!permissionContext) throw Error('No permission context')
+      if (!issuePermissionsResponse) throw Error('No permissions available')
       const callData = encodeFunctionData({
         abi: donutContractAbi,
         functionName: 'purchase',
         args: [1]
       })
 
-      await executeSimplePermissionValidatorTransaction(permissionContext, {
-        to: donutContractaddress,
+      await buildAndSendTransactionsWithPermissions(issuePermissionsResponse, [{
+        target: donutContractaddress,
         value: parseEther('0.0001'),
-        data: callData
-      })
+        callData: callData
+      }])
       toast({
         title: 'Signing with local key successfully completed'
       })
@@ -68,9 +65,9 @@ export default function LocalPrivateKeySection() {
     setTransactionPending(false)
   }
 
-  async function executeSimplePermissionValidatorTransaction(
-    permissionContext: PermissionContext,
-    { to, value, data }: { to: Address; value: bigint; data: Hex }
+  async function buildAndSendTransactionsWithPermissions(
+    issuedPermissionsResponse: IssuePermissionsResponse,
+    actions: Execution[]
   ) {
     const apiKey = process.env.NEXT_PUBLIC_PIMLICO_KEY
     const bundlerUrl = `https://api.pimlico.io/v1/sepolia/rpc?apikey=${apiKey}`
@@ -88,35 +85,34 @@ export default function LocalPrivateKeySection() {
 
     const paymasterUrl = `https://api.pimlico.io/v2/sepolia/rpc?apikey=${apiKey}`
 
-    const { accountAddress, permissionValidatorAddress, accountType } = permissionContext
+    const { initCode , accountAddress, userOperationBuilder:userOpBuilderAddress, permissionsContext } = issuedPermissionsResponse
 
     const testDappPrivateKey = signerPrivateKey! as `0x${string}`
     const dappAccount = signer!
     console.log('dappAccount(permitted Signer) Address: ', dappAccount.address)
 
-    let userOpBuilderAccountUtil: UserOpBuilderAccountUtil
-
-    if (accountType === 'KernelV3') {
-      userOpBuilderAccountUtil = new KernelV3AccountUtils()
-    } else {
-      userOpBuilderAccountUtil = new Safe7579AccountUtils()
-    }
-    const actions = [{ target: to, value: value, callData: data }]
-
-    const nonce = await userOpBuilderAccountUtil.getNonceWithContext(publicClient, {
+    const userOperationBuilder = new UserOperationBuilder()
+    
+    const nonce = await userOperationBuilder.getNonceWithContext(publicClient, {
+      userOpBuilderAddress:userOpBuilderAddress!,
       sender: accountAddress,
-      entryPoint,
-      permissionValidatorAddress
+      permissionsContext:permissionsContext!
     })
-    const callData = await userOpBuilderAccountUtil.getCallDataWithContext(publicClient, {
-      permissionContext,
+
+    console.log({nonce})
+    const callData = await userOperationBuilder.getCallDataWithContext(publicClient, {
+      sender:accountAddress,
+      userOpBuilderAddress:userOpBuilderAddress!,
+      permissionsContext:permissionsContext!,
       actions
     })
-    console.log('PermissionValidator Nonce: ', nonce)
+    console.log({callData})
 
     const gasPrice = await bundlerClient.getUserOperationGasPrice()
     const userOp: UserOperation<'v0.7'> = {
-      sender: accountAddress.toLowerCase() as `0x${string}`,
+      sender: accountAddress as `0x${string}`,
+      factory: initCode && initCode !== '0x' ? initCode.substring(0,42) as `0x${string}`:undefined,
+      factoryData: initCode && initCode !== '0x' ? `0x${initCode.substring(42)}` as `0x${string}`:undefined ,
       nonce: nonce,
       callData: callData,
       callGasLimit: BigInt(2000000),
@@ -126,7 +122,7 @@ export default function LocalPrivateKeySection() {
       maxPriorityFeePerGas: gasPrice.fast.maxPriorityFeePerGas,
       signature: '0x'
     }
-    console.log('Partial userOperation to get userOpHash :', userOp)
+    console.log('Partial userOperation to get userOpHash :', {userOp})
 
     const userOpHash = getUserOperationHash({
       userOperation: {
@@ -143,13 +139,15 @@ export default function LocalPrivateKeySection() {
     })
     const rawSignature = signatureToHex(dappSignatureOnUserOp)
     console.log('Raw signature on UserOpHash: ', rawSignature)
-
-    const finalSigForValidator = await userOpBuilderAccountUtil.getSignatureWithContext(
+    userOp.signature = rawSignature
+    const preSignaturePackedUserOp = getPackedUserOperation(userOp)
+    const finalSigForValidator = await userOperationBuilder.getSignatureWithContext(
       publicClient,
       {
-        rawSignature,
-        permissionContext,
-        userOperation: userOp
+        sender:accountAddress,
+        permissionsContext: permissionsContext!,
+        userOperation: preSignaturePackedUserOp,
+        userOpBuilderAddress:userOpBuilderAddress!,
       }
     )
 
@@ -215,10 +213,10 @@ export default function LocalPrivateKeySection() {
       toast({ title: 'Success', description: 'Permissions granted successfully' })
 
       console.log('Permissions granted successfully', {
-        permissionContext: serializedPermissionContext
+        permissionsContext: serializedPermissionContext
       })
-      const permissionContext = serializedPermissionContext as unknown as PermissionContext
-      if (permissionContext) setPermissionContext(permissionContext)
+      const issuedPermissionsResponse = serializedPermissionContext as unknown as IssuePermissionsResponse
+      if (issuedPermissionsResponse) setIssuePermissionsResponse(issuedPermissionsResponse)
     } catch (error) {
       toast({
         title: 'Error',
@@ -230,7 +228,7 @@ export default function LocalPrivateKeySection() {
   }
 
   function handlePermissionClear() {
-    setPermissionContext(undefined)
+    setIssuePermissionsResponse(undefined)
   }
 
   return (
@@ -245,7 +243,7 @@ export default function LocalPrivateKeySection() {
               <p className="text-sm">{`${signer.address.substring(0, 5)}...${signer.address.substring(16, 22)}`}</p>
               <Button
                 disabled={
-                  isRequestPermissionLoading || permissionContext != undefined || !isConnected
+                  isRequestPermissionLoading || issuePermissionsResponse !== undefined || !isConnected
                 }
                 onClick={onRequestPermissions}
               >
@@ -259,7 +257,7 @@ export default function LocalPrivateKeySection() {
                 )}
               </Button>
               <Button
-                disabled={!permissionContext || isTransactionPending}
+                disabled={!issuePermissionsResponse || isTransactionPending}
                 onClick={handleTxWithLocalKey}
               >
                 {isTransactionPending ? (
@@ -272,7 +270,7 @@ export default function LocalPrivateKeySection() {
                 )}
               </Button>
               <Button
-                disabled={!permissionContext || isTransactionPending}
+                disabled={!issuePermissionsResponse || isTransactionPending}
                 onClick={handlePermissionClear}
               >
                 Clear Permission
