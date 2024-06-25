@@ -38,6 +38,7 @@ export default function SessionKeySection() {
       const sessionKeyAccount = await deserializeSessionKeyAccount(
         publicClient,
         entryPoint,
+        '0.3.0',
         sessionKey,
         signer
       )
@@ -85,6 +86,7 @@ export default function SessionKeySection() {
       const sessionKeyAccount = await deserializeSessionKeyAccount(
         publicClient,
         entryPoint,
+        '0.3.0',
         sessionKey,
         signer
       )
