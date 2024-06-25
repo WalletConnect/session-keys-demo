@@ -26,13 +26,13 @@
     "lucide-react": "^0.376.0",
     "next": "14.1.2",
     "next-themes": "^0.2.1",
-    "permissionless": "^0.1.21",
+    "permissionless": "^0.1.31",
     "react": "^18",
     "react-dom": "^18",
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
-    "viem": "2.9.28",
-    "wagmi": "^2.6.0"
+    "viem": "2.16.2",
+    "wagmi": "^2.10.5"
   },
   "devDependencies": {
     "@types/node": "^20",
