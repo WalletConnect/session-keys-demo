@@ -164,7 +164,8 @@ export default function LocalPrivateKeySection() {
     })
 
     let txReceipt = await bundlerClient.waitForUserOperationReceipt({
-      hash: _userOpHash
+      hash: _userOpHash,
+      timeout: 120000
     })
 
     return txReceipt.receipt.transactionHash
