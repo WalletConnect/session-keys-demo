@@ -14,8 +14,8 @@ export default function Home() {
       <WalletSection />
       <InfoSection />
       <LocalPrivateKeySection />
-      {/* <PasskeySection /> */}
-      {/* {isConnected ? <ActionsSection /> : null} */}
+      <PasskeySection />
+      {isConnected ? <ActionsSection /> : null}
       <SessionKeySection />
     </div>
   )

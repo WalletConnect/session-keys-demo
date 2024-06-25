@@ -100,9 +100,9 @@ async function signWithPasskey(challenge: Uint8Array): Promise<PublicKeyCredenti
   }
   const credential = (await navigator.credentials.get({
     publicKey: publicKeyCredentialRequestOptions,
-    signal: abortController.signal,
+    signal: abortController.signal
     // Specify 'conditional' to activate conditional UI
-    mediation: 'conditional'
+    // mediation: 'conditional'
   })) as PublicKeyCredential | null
   return credential
 }
