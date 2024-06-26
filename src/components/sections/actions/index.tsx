@@ -1,8 +1,8 @@
 import { Button } from '../../ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card'
-import { useSignTypedData, useWriteContract } from 'wagmi'
+import { useAccount, useSignTypedData, useWriteContract } from 'wagmi'
 import { useToast } from '../../ui/use-toast'
-import { Hex, numberToHex, parseEther, toHex } from 'viem'
+import { Hex, createWalletClient, custom, numberToHex, parseEther, toHex } from 'viem'
 import { donutContractAbi, donutContractaddress } from '@/consts/contract'
 import { permissionsDomain, permissionsTypes } from '@/consts/typedData'
 import { SESSIONKEY_LOCALSTORAGE_KEY } from '@/consts/storage'
@@ -13,8 +13,13 @@ import { useUserOpBuilder } from '@/hooks/useUserOpBuilder'
 import { PermissionBuilderSampleData, getRandomBytes } from '@/lib/utils'
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import { sepolia } from 'viem/chains'
+import { walletActionsErc7715 } from 'viem/experimental'
+import { EthereumProvider } from '@walletconnect/ethereum-provider'
+import { encodeSECP256k1PublicKeyToDID } from '@/utils/CommonUtils'
 
 export default function ActionsSection() {
+  const { isConnected, connector } = useAccount()
   const { toast } = useToast()
   const [isRequestingPermissions, setRequestingPermissions] = useState(false)
   const [isPurchasingDonut, setPurchasingDonut] = useState(false)
@@ -102,6 +107,67 @@ export default function ActionsSection() {
     setRequestingPermissions(false)
   }
 
+  async function onRequestPermissions7715() {
+    console.log('Requesting 7715 permissions')
+
+    setRequestingPermissions(true)
+    try {
+      const permissions = [
+        {
+          type: {
+            custom: 'donut-purchase'
+          },
+          data: {
+            target: donutContractaddress,
+            abi: donutContractAbi,
+            valueLimit: parseEther('10'),
+            // @ts-ignore
+            functionName: 'purchase'
+          },
+          policies: []
+        }
+      ]
+      const targetAddress = signer?.address
+      if (!targetAddress) {
+        throw new Error('Local signer not initialized')
+      }
+
+      const _walletClient = createWalletClient({
+        chain: sepolia,
+        transport: custom(
+          (await connector?.getProvider()) as unknown as Awaited<
+            ReturnType<(typeof EthereumProvider)['init']>
+          >
+        )
+      }).extend(walletActionsErc7715())
+
+      const grantPermissionsResponse = await _walletClient.grantPermissions({
+        expiry: 1716846083638,
+        permissions,
+        signer: {
+          type: 'key',
+          data: {
+            id: `did:ethr:${targetAddress}`
+          }
+        }
+      })
+
+      const serializedSessionKey = grantPermissionsResponse.permissionsContext
+
+      toast({ title: 'Success', description: 'Permissions granted successfully' })
+      console.log('Permissions granted successfully', { grantPermissionsResponse })
+      setSessionKey(serializedSessionKey)
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to obtain permissions'
+      })
+      console.log(error)
+    } finally {
+      setRequestingPermissions(false)
+    }
+  }
+
   async function onPurchase() {
     setPurchasingDonut(true)
     try {
@@ -133,7 +199,7 @@ export default function ActionsSection() {
         <CardContent className="grid gap-2 grid-cols-2">
           <BasicActions />
           <CardTitle className="col-span-2 my-3">Permissions</CardTitle>
-          <Button onClick={onRequestPermissions} disabled={isRequestingPermissions}>
+          <Button onClick={onRequestPermissions7715} disabled={isRequestingPermissions}>
             {isRequestingPermissions ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
