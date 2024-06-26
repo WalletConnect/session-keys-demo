@@ -31,7 +31,7 @@ import { sign } from 'viem/accounts'
 import { sepolia } from 'viem/chains'
 import { Execution } from '@/lib/UserOperationBuilderUtil/types'
 import { UserOperationBuilder } from '@/lib/UserOperationBuilderUtil'
-import { encodeSECP256k1PublicKeyToDID } from '@/utils/CommonUtils'
+import { encodeSecp256k1PublicKeyToDID } from '@/utils/CommonUtils'
 import { useLocalStorageState } from '@/hooks/useLocalStorageState'
 import { GRANTED_PERMISSIONS_KEY } from '@/consts/storage'
 
@@ -213,7 +213,7 @@ export default function LocalPrivateKeySection() {
         signer: {
           type: 'key',
           data: {
-            id: encodeSECP256k1PublicKeyToDID(targetPublicKey)
+            id: encodeSecp256k1PublicKeyToDID(targetPublicKey)
           }
         }
       })
@@ -243,7 +243,7 @@ export default function LocalPrivateKeySection() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>With local secp256K1 key</CardTitle>
+          <CardTitle>UserOpBuilder</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
           {signerPrivateKey && signer && (
@@ -253,9 +253,6 @@ export default function LocalPrivateKeySection() {
                 <div className="grid gap-2 text-sm">
                   <p className="break-all">
                     <span className="font-semibold">Address:</span> {signer.address}
-                  </p>
-                  <p className="break-all">
-                    <span className="font-semibold">PrivateKey:</span> {signerPrivateKey}
                   </p>
                 </div>
               </div>
