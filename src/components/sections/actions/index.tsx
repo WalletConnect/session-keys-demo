@@ -16,7 +16,7 @@ import { Loader2 } from 'lucide-react'
 import { sepolia } from 'viem/chains'
 import { walletActionsErc7715 } from 'viem/experimental'
 import { EthereumProvider } from '@walletconnect/ethereum-provider'
-import { encodeSECP256k1PublicKeyToDID } from '@/utils/CommonUtils'
+import { encodeSecp256k1PublicKeyToDID } from '@/utils/CommonUtils'
 
 export default function ActionsSection() {
   const { isConnected, connector } = useAccount()
@@ -54,60 +54,6 @@ export default function ActionsSection() {
   }
 
   async function onRequestPermissions() {
-    setRequestingPermissions(true)
-    try {
-      const permissions = [
-        {
-          target: donutContractaddress,
-          abi: donutContractAbi,
-          valueLimit: parseEther('10'),
-          // @ts-ignore
-          functionName: 'purchase'
-        }
-      ]
-
-      const targetAddress = signer?.address
-      if (!targetAddress) {
-        throw new Error('Local signer not initialized')
-      }
-      const serializedSessionKey = await signTypedDataAsync({
-        domain: permissionsDomain,
-        message: {
-          targetAddress,
-          permissions: JSON.stringify(permissions),
-          //@ts-ignore
-          scope: [
-            {
-              description: 'Interact with Donut contract'
-            },
-            {
-              description: 'Spend up to 0.5 ETH in a transaction'
-            },
-            {
-              description: 'Maximum of 5 ETH spent per 30 days'
-            },
-            {
-              description: 'Session key valid for 7 days'
-            }
-          ]
-        },
-        primaryType: 'PermissionRequest',
-        types: permissionsTypes
-      })
-      toast({ title: 'Success', description: 'Permissions granted successfully' })
-      console.log('Permissions granted successfully', { serializedSessionKey })
-      setSessionKey(serializedSessionKey)
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to obtain permissions'
-      })
-      console.log(error)
-    }
-    setRequestingPermissions(false)
-  }
-
-  async function onRequestPermissions7715() {
     console.log('Requesting 7715 permissions')
 
     setRequestingPermissions(true)
@@ -147,7 +93,7 @@ export default function ActionsSection() {
         signer: {
           type: 'key',
           data: {
-            id: `did:ethr:${targetAddress}`
+            id: encodeSecp256k1PublicKeyToDID(signer.publicKey)
           }
         }
       })
@@ -199,7 +145,7 @@ export default function ActionsSection() {
         <CardContent className="grid gap-2 grid-cols-2">
           <BasicActions />
           <CardTitle className="col-span-2 my-3">Permissions</CardTitle>
-          <Button onClick={onRequestPermissions7715} disabled={isRequestingPermissions}>
+          <Button onClick={onRequestPermissions} disabled={isRequestingPermissions}>
             {isRequestingPermissions ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

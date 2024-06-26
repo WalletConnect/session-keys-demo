@@ -1,6 +1,6 @@
 import bs58 from 'bs58'
 
-export const encodeSECP256k1PublicKeyToDID = (publicKey: string) => {
+export const encodeSecp256k1PublicKeyToDID = (publicKey: string) => {
   // Remove '0x' prefix if present
   publicKey = publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey
 
