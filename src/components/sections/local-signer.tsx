@@ -32,27 +32,31 @@ import { sepolia } from 'viem/chains'
 import { Execution } from '@/lib/UserOperationBuilderUtil/types'
 import { UserOperationBuilder } from '@/lib/UserOperationBuilderUtil'
 import { encodeSECP256k1PublicKeyToDID } from '@/utils/CommonUtils'
+import { useLocalStorageState } from '@/hooks/useLocalStorageState'
+import { GRANTED_PERMISSIONS_KEY } from '@/consts/storage'
 
 export default function LocalPrivateKeySection() {
   const { isConnected, connector } = useAccount()
   const { signer, signerPrivateKey } = useLocalSigner()
   const [isRequestPermissionLoading, setRequestPermissionLoading] = useState<boolean>(false)
   const [isTransactionPending, setTransactionPending] = useState<boolean>(false)
-  const [grantPermissionsResponse, setGrantPermissionsResponse] =
-    useState<GrantPermissionsReturnType>()
+  const [grantPermissions, setGrantPermissions] = useLocalStorageState<GrantPermissionsReturnType | undefined>(
+    GRANTED_PERMISSIONS_KEY,
+    undefined
+  )
   const { toast } = useToast()
 
   const handleTxWithLocalKey = async () => {
     setTransactionPending(true)
     try {
-      if (!grantPermissionsResponse) throw Error('No permissions available')
+      if (!grantPermissions) throw Error('No permissions available')
       const callData = encodeFunctionData({
         abi: donutContractAbi,
         functionName: 'purchase',
         args: [1]
       })
 
-      await buildAndSendTransactionsWithPermissions(grantPermissionsResponse, [
+      await buildAndSendTransactionsWithPermissions(grantPermissions, [
         {
           target: donutContractaddress,
           value: parseEther('0.0001'),
@@ -216,7 +220,7 @@ export default function LocalPrivateKeySection() {
       })
       console.log({ grantPermissionsResponse })
       if (grantPermissionsResponse) {
-        setGrantPermissionsResponse(grantPermissionsResponse)
+        setGrantPermissions(grantPermissionsResponse)
         setRequestPermissionLoading(false)
         toast({ title: 'Success', description: 'Permissions granted successfully' })
         return
@@ -233,7 +237,7 @@ export default function LocalPrivateKeySection() {
   }
 
   function handlePermissionClear() {
-    setGrantPermissionsResponse(undefined)
+    setGrantPermissions(undefined)
   }
 
   return (
@@ -263,7 +267,7 @@ export default function LocalPrivateKeySection() {
                   <Button
                     disabled={
                       isRequestPermissionLoading ||
-                      grantPermissionsResponse !== undefined ||
+                      grantPermissions !== undefined ||
                       !isConnected
                     }
                     onClick={onRequestPermissions}
@@ -278,7 +282,7 @@ export default function LocalPrivateKeySection() {
                     )}
                   </Button>
                   <Button
-                    disabled={!grantPermissionsResponse || isTransactionPending}
+                    disabled={!grantPermissions || isTransactionPending}
                     onClick={handlePermissionClear}
                   >
                     Clear Permission
@@ -289,7 +293,7 @@ export default function LocalPrivateKeySection() {
               <div>
                 <CardTitle className="mb-2">Donut contract</CardTitle>
                 <Button
-                  disabled={!grantPermissionsResponse || isTransactionPending}
+                  disabled={!grantPermissions || isTransactionPending}
                   onClick={handleTxWithLocalKey}
                 >
                   {isTransactionPending ? (
