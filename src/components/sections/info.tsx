@@ -47,36 +47,31 @@ export default function InfoSection() {
 
   return (
     <>
-      {!isReadDonutLoading && !isReadDonutError && donutData ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Information</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-2 grid-cols-2">
-            {!address && lastUsedAddress ? (
-              <div className="col-span-2 grid gap-2 my-3">
-                <Label>Last used address</Label>
-                <div className="grid grid-cols-4 gap-2">
-                  <Input
-                    type="text"
-                    value={lastUsedAddress}
-                    readOnly={true}
-                    className="col-span-3"
-                  />
-                  <Button variant="secondary" onClick={onClearAddress}>
-                    Clear
-                  </Button>
-                </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Information</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-2 grid-cols-2">
+          {!address && lastUsedAddress ? (
+            <div className="col-span-2 grid gap-2 my-3">
+              <Label>Last used address</Label>
+              <div className="grid grid-cols-4 gap-2">
+                <Input type="text" value={lastUsedAddress} readOnly={true} className="col-span-3" />
+                <Button variant="secondary" onClick={onClearAddress}>
+                  Clear
+                </Button>
               </div>
-            ) : null}
+            </div>
+          ) : null}
 
-            <p className="mt-1.5">🍩 Donuts owned: {BigInt(donutData as string).toString()} </p>
-            <Button variant="outline" onClick={onRefreshDonuts}>
-              Refresh
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
+          <p className="mt-1.5">
+            🍩 Donuts owned: {BigInt((donutData as string) || 0).toString()}{' '}
+          </p>
+          <Button variant="outline" onClick={onRefreshDonuts}>
+            Refresh
+          </Button>
+        </CardContent>
+      </Card>
     </>
   )
 }
