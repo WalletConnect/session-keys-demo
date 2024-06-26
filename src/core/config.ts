@@ -1,7 +1,7 @@
-import { defaultWagmiConfig } from '@web3modal/wagmi/react/config'
-
-import { cookieStorage, createStorage } from 'wagmi'
-import { sepolia } from 'wagmi/chains'
+import { sepolia, type Chain } from 'wagmi/chains'
+import { walletConnect } from 'wagmi/connectors'
+import { OPTIONAL_METHODS } from '@walletconnect/ethereum-provider'
+import { CreateConnectorFn, cookieStorage, createConfig, createStorage, http } from 'wagmi'
 
 // Get projectId at https://cloud.walletconnect.com
 export const projectId = process.env.NEXT_PUBLIC_PROJECT_ID
@@ -15,17 +15,21 @@ const metadata = {
   icons: ['https://avatars.githubusercontent.com/u/37784886']
 }
 
+const optionalMethods: string[] = [...OPTIONAL_METHODS, 'wallet_grantPermissions']
+const connectors: CreateConnectorFn[] = [
+  walletConnect({
+    projectId,
+    metadata,
+    showQrModal: false,
+    //@ts-ignore
+    optionalMethods
+  })
+]
 // Create wagmiConfig
-export const config = defaultWagmiConfig({
-  chains: [sepolia], // required
-  projectId, // required
-  metadata, // required
-  ssr: true,
-  storage: createStorage({
-    storage: cookieStorage
-  }),
-  enableWalletConnect: true, // Optional - true by default
-  enableInjected: false,
-  enableEIP6963: false,
-  enableCoinbase: false
+export const config = createConfig({
+  chains: [sepolia] as [Chain, ...Chain[]], // required
+  transports: {
+    11155111: http()
+  },
+  connectors
 })

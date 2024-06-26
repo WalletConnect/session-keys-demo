@@ -5,10 +5,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { useToast } from '@/components/ui/use-toast'
 import { useLocalSigner } from '@/hooks/useLocalSigner'
 import { donutContractAbi, donutContractaddress } from '@/consts/contract'
-import { createPublicClient, encodeFunctionData, http, parseEther, signatureToHex } from 'viem'
-import { useAccount, useSignTypedData } from 'wagmi'
-import { permissionsDomain, permissionsTypes } from '@/consts/typedData'
+import {
+  createPublicClient,
+  createWalletClient,
+  custom,
+  encodeFunctionData,
+  http,
+  parseEther,
+  signatureToHex
+} from 'viem'
+import { GrantPermissionsReturnType } from 'viem/experimental'
+import { walletActionsErc7715 } from 'viem/experimental'
+import { useAccount } from 'wagmi'
 import { useState } from 'react'
+import { EthereumProvider } from '@walletconnect/ethereum-provider'
 import {
   ENTRYPOINT_ADDRESS_V07,
   createBundlerClient,
@@ -19,31 +29,33 @@ import { pimlicoBundlerActions } from 'permissionless/actions/pimlico'
 import { UserOperation } from 'permissionless/types'
 import { sign } from 'viem/accounts'
 import { sepolia } from 'viem/chains'
-import { IssuePermissionsResponse } from '@/lib/ERC7715/types'
 import { Execution } from '@/lib/UserOperationBuilderUtil/types'
 import { UserOperationBuilder } from '@/lib/UserOperationBuilderUtil'
+import { encodeSECP256k1PublicKeyToDID } from '@/utils/CommonUtils'
+import { useLocalStorageState } from '@/hooks/useLocalStorageState'
+import { GRANTED_PERMISSIONS_KEY } from '@/consts/storage'
 
 export default function LocalPrivateKeySection() {
-  const { isConnected } = useAccount()
+  const { isConnected, connector } = useAccount()
   const { signer, signerPrivateKey } = useLocalSigner()
   const [isRequestPermissionLoading, setRequestPermissionLoading] = useState<boolean>(false)
   const [isTransactionPending, setTransactionPending] = useState<boolean>(false)
-  const { signTypedDataAsync } = useSignTypedData()
-  const [issuePermissionsResponse, setIssuePermissionsResponse] =
-    useState<IssuePermissionsResponse>()
+  const [grantPermissions, setGrantPermissions] = useLocalStorageState<
+    GrantPermissionsReturnType | undefined
+  >(GRANTED_PERMISSIONS_KEY, undefined)
   const { toast } = useToast()
 
   const handleTxWithLocalKey = async () => {
     setTransactionPending(true)
     try {
-      if (!issuePermissionsResponse) throw Error('No permissions available')
+      if (!grantPermissions) throw Error('No permissions available')
       const callData = encodeFunctionData({
         abi: donutContractAbi,
         functionName: 'purchase',
         args: [1]
       })
 
-      await buildAndSendTransactionsWithPermissions(issuePermissionsResponse, [
+      await buildAndSendTransactionsWithPermissions(grantPermissions, [
         {
           target: donutContractaddress,
           value: parseEther('0.0001'),
@@ -63,7 +75,7 @@ export default function LocalPrivateKeySection() {
   }
 
   async function buildAndSendTransactionsWithPermissions(
-    issuedPermissionsResponse: IssuePermissionsResponse,
+    issuedPermissionsResponse: GrantPermissionsReturnType,
     actions: Execution[]
   ) {
     const apiKey = process.env.NEXT_PUBLIC_PIMLICO_KEY
@@ -82,12 +94,7 @@ export default function LocalPrivateKeySection() {
 
     const paymasterUrl = `https://api.pimlico.io/v2/sepolia/rpc?apikey=${apiKey}`
 
-    const {
-      initCode,
-      accountAddress,
-      userOperationBuilder: userOpBuilderAddress,
-      permissionsContext
-    } = issuedPermissionsResponse
+    const { factory, factoryData, signerData, permissionsContext } = issuedPermissionsResponse
 
     const testDappPrivateKey = signerPrivateKey! as `0x${string}`
     const dappAccount = signer!
@@ -96,29 +103,25 @@ export default function LocalPrivateKeySection() {
     const userOperationBuilder = new UserOperationBuilder()
 
     const nonce = await userOperationBuilder.getNonceWithContext(publicClient, {
-      userOpBuilderAddress: userOpBuilderAddress!,
-      sender: accountAddress,
-      permissionsContext: permissionsContext!
+      userOpBuilderAddress: signerData?.userOpBuilder!,
+      sender: signerData?.submitToAddress!,
+      permissionsContext: permissionsContext! as `0x${string}`
     })
 
     console.log({ nonce })
     const callData = await userOperationBuilder.getCallDataWithContext(publicClient, {
-      sender: accountAddress,
-      userOpBuilderAddress: userOpBuilderAddress!,
-      permissionsContext: permissionsContext!,
+      userOpBuilderAddress: signerData?.userOpBuilder!,
+      sender: signerData?.submitToAddress!,
+      permissionsContext: permissionsContext! as `0x${string}`,
       actions
     })
     console.log({ callData })
 
     const gasPrice = await bundlerClient.getUserOperationGasPrice()
     const userOp: UserOperation<'v0.7'> = {
-      sender: accountAddress as `0x${string}`,
-      factory:
-        initCode && initCode !== '0x' ? (initCode.substring(0, 42) as `0x${string}`) : undefined,
-      factoryData:
-        initCode && initCode !== '0x'
-          ? (`0x${initCode.substring(42)}` as `0x${string}`)
-          : undefined,
+      sender: signerData?.submitToAddress!,
+      factory,
+      factoryData: factoryData ? (factoryData as `0x${string}`) : undefined,
       nonce: nonce,
       callData: callData,
       callGasLimit: BigInt(2000000),
@@ -148,10 +151,10 @@ export default function LocalPrivateKeySection() {
     userOp.signature = rawSignature
     const preSignaturePackedUserOp = getPackedUserOperation(userOp)
     const finalSigForValidator = await userOperationBuilder.getSignatureWithContext(publicClient, {
-      sender: accountAddress,
-      permissionsContext: permissionsContext!,
+      sender: signerData?.submitToAddress!,
+      permissionsContext: permissionsContext! as `0x${string}`,
       userOperation: preSignaturePackedUserOp,
-      userOpBuilderAddress: userOpBuilderAddress!
+      userOpBuilderAddress: signerData?.userOpBuilder!
     })
 
     userOp.signature = finalSigForValidator
@@ -165,7 +168,8 @@ export default function LocalPrivateKeySection() {
     })
 
     let txReceipt = await bundlerClient.waitForUserOperationReceipt({
-      hash: _userOpHash
+      hash: _userOpHash,
+      timeout: 120000
     })
 
     return txReceipt.receipt.transactionHash
@@ -175,112 +179,130 @@ export default function LocalPrivateKeySection() {
     setRequestPermissionLoading(true)
 
     try {
-      const permissions = [
-        {
-          target: donutContractaddress,
-          abi: donutContractAbi,
-          valueLimit: parseEther('10'),
-          // @ts-ignore
-          functionName: 'purchase'
-        }
-      ]
-
-      const targetAddress = signer?.address
-      if (!targetAddress) {
+      const targetPublicKey = signer?.publicKey
+      if (!targetPublicKey) {
         throw new Error('Local signer not initialized')
       }
-      const serializedPermissionContext = await signTypedDataAsync({
-        domain: permissionsDomain,
-        message: {
-          targetAddress,
-          permissions: JSON.stringify(permissions),
-          //@ts-ignore
-          scope: [
-            {
-              description: 'Interact with Donut contract'
-            },
-            {
-              description: 'Spend up to 0.5 ETH in a transaction'
-            },
-            {
-              description: 'Maximum of 5 ETH spent per 30 days'
-            },
-            {
-              description: 'Session key valid for 7 days'
-            }
-          ]
-        },
-        primaryType: 'PermissionRequest',
-        types: permissionsTypes
-      })
-      toast({ title: 'Success', description: 'Permissions granted successfully' })
+      const _walletClient = createWalletClient({
+        chain: sepolia,
+        transport: custom(
+          (await connector?.getProvider()) as unknown as Awaited<
+            ReturnType<(typeof EthereumProvider)['init']>
+          >
+        )
+      }).extend(walletActionsErc7715())
 
-      console.log('Permissions granted successfully', {
-        permissionsContext: serializedPermissionContext
+      const grantPermissionsResponse = await _walletClient.grantPermissions({
+        expiry: 1716846083638,
+        permissions: [
+          {
+            type: 'native-token-transfer',
+            data: {
+              ticker: 'ETH'
+            },
+            policies: [
+              {
+                type: 'token-allowance',
+                data: {
+                  allowance: parseEther('1')
+                }
+              }
+            ]
+          }
+        ],
+        signer: {
+          type: 'key',
+          data: {
+            id: encodeSECP256k1PublicKeyToDID(targetPublicKey)
+          }
+        }
       })
-      const issuedPermissionsResponse =
-        serializedPermissionContext as unknown as IssuePermissionsResponse
-      if (issuedPermissionsResponse) setIssuePermissionsResponse(issuedPermissionsResponse)
+      console.log({ grantPermissionsResponse })
+      if (grantPermissionsResponse) {
+        setGrantPermissions(grantPermissionsResponse)
+        setRequestPermissionLoading(false)
+        toast({ title: 'Success', description: 'Permissions granted successfully' })
+        return
+      }
+      toast({ title: 'Error', description: 'Failed to obtain permissions' })
     } catch (error) {
       toast({
         title: 'Error',
         description: 'Failed to obtain permissions'
       })
       console.log(error)
+      setRequestPermissionLoading(false)
     }
-    setRequestPermissionLoading(false)
   }
 
   function handlePermissionClear() {
-    setIssuePermissionsResponse(undefined)
+    setGrantPermissions(undefined)
   }
 
   return (
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Sync Flow with Secp256K1 key</CardTitle>
+          <CardTitle>With local secp256K1 key</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="grid gap-4">
           {signerPrivateKey && signer && (
-            <div className="flex flex-col gap-2">
-              <p className="text-sm">{`${signer.address.substring(0, 5)}...${signer.address.substring(16, 22)}`}</p>
-              <Button
-                disabled={
-                  isRequestPermissionLoading ||
-                  issuePermissionsResponse !== undefined ||
-                  !isConnected
-                }
-                onClick={onRequestPermissions}
-              >
-                {isRequestPermissionLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Approve/Reject on wallet
-                  </>
-                ) : (
-                  <>Request Permission</>
-                )}
-              </Button>
-              <Button
-                disabled={!issuePermissionsResponse || isTransactionPending}
-                onClick={handleTxWithLocalKey}
-              >
-                {isTransactionPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Purchasing...
-                  </>
-                ) : (
-                  <>Purchase Donut</>
-                )}
-              </Button>
-              <Button
-                disabled={!issuePermissionsResponse || isTransactionPending}
-                onClick={handlePermissionClear}
-              >
-                Clear Permission
-              </Button>
+            <div className="flex flex-col gap-4">
+              <div>
+                <CardTitle className="mb-2">Key Details</CardTitle>
+                <div className="grid gap-2 text-sm">
+                  <p className="break-all">
+                    <span className="font-semibold">Address:</span> {signer.address}
+                  </p>
+                  <p className="break-all">
+                    <span className="font-semibold">PrivateKey:</span> {signerPrivateKey}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <CardTitle className="mb-2">Permissions</CardTitle>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button
+                    disabled={
+                      isRequestPermissionLoading || grantPermissions !== undefined || !isConnected
+                    }
+                    onClick={onRequestPermissions}
+                  >
+                    {isRequestPermissionLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Check on wallet
+                      </>
+                    ) : (
+                      <>Request Permission</>
+                    )}
+                  </Button>
+                  <Button
+                    disabled={!grantPermissions || isTransactionPending}
+                    onClick={handlePermissionClear}
+                  >
+                    Clear Permission
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <CardTitle className="mb-2">Donut contract</CardTitle>
+                <Button
+                  disabled={!grantPermissions || isTransactionPending}
+                  onClick={handleTxWithLocalKey}
+                >
+                  {isTransactionPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Purchasing...
+                    </>
+                  ) : (
+                    <>Purchase Donut</>
+                  )}
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
