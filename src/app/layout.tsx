@@ -31,13 +31,13 @@ export default function RootLayout({
       <head />
       <body
         className={cn(
-          'min-h-screen bg-background font-sans antialiased pt-12 pb-24 mt-12',
+          'min-h-screen bg-background font-sans antialiased pt-12 pb-24 mt-12 overflow-y-auto',
           fontSans.variable
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="dark">
           <ContextProvider initialState={initialState}>
-            <div className="flex items-center justify-center h-screen">{children}</div>
+            <div className="flex items-center justify-center min-h-screen">{children}</div>
           </ContextProvider>
           <Toaster />
         </ThemeProvider>
