@@ -4,9 +4,9 @@ import {
   createZeroDevPaymasterClient
 } from '@zerodev/sdk'
 import { type ClassValue, clsx } from 'clsx'
-import { ENTRYPOINT_ADDRESS_V07 } from 'permissionless'
+import { ENTRYPOINT_ADDRESS_V06 } from 'permissionless'
 import { SmartAccount } from 'permissionless/accounts'
-import { ENTRYPOINT_ADDRESS_V07_TYPE, EntryPoint } from 'permissionless/types'
+import { ENTRYPOINT_ADDRESS_V06_TYPE } from 'permissionless/types'
 import { twMerge } from 'tailwind-merge'
 import { Hex, createPublicClient, http, numberToHex } from 'viem'
 import { sepolia } from 'viem/chains'
@@ -31,12 +31,12 @@ export function createPublicBundlerClient() {
   })
 }
 
-export function createKernelClient(account: KernelSmartAccount<ENTRYPOINT_ADDRESS_V07_TYPE>) {
+export function createKernelClient(account: KernelSmartAccount<ENTRYPOINT_ADDRESS_V06_TYPE>) {
   const projectId = process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID
   if (!projectId) {
     throw new Error('ZeroDev project id expected')
   }
-  const entryPoint = ENTRYPOINT_ADDRESS_V07
+  const entryPoint = ENTRYPOINT_ADDRESS_V06
   return createKernelAccountClient({
     account,
     chain: sepolia,

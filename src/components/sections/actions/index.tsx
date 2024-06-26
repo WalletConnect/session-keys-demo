@@ -11,9 +11,13 @@ import BasicActions from './basic'
 import { useLocalSigner } from '@/hooks/useLocalSigner'
 import { useUserOpBuilder } from '@/hooks/useUserOpBuilder'
 import { PermissionBuilderSampleData, getRandomBytes } from '@/lib/utils'
+import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
 
 export default function ActionsSection() {
   const { toast } = useToast()
+  const [isRequestingPermissions,setRequestingPermissions] = useState(false)
+  const [isPurchasingDonut,setPurchasingDonut] = useState(false)
   const { signTypedDataAsync } = useSignTypedData()
   const { writeContractAsync } = useWriteContract()
   const [sessionKey, setSessionKey] = useLocalStorageState<string | undefined>(
@@ -45,6 +49,7 @@ export default function ActionsSection() {
   }
 
   async function onRequestPermissions() {
+    setRequestingPermissions(true)
     try {
       const permissions = [
         {
@@ -94,9 +99,11 @@ export default function ActionsSection() {
       })
       console.log(error)
     }
+    setRequestingPermissions(false)
   }
 
   async function onPurchase() {
+    setPurchasingDonut(true)
     try {
       const result = await writeContractAsync({
         abi: donutContractAbi,
@@ -114,6 +121,7 @@ export default function ActionsSection() {
       })
       console.log(error)
     }
+    setPurchasingDonut(false)
   }
 
   return (
@@ -125,10 +133,28 @@ export default function ActionsSection() {
         <CardContent className="grid gap-2 grid-cols-2">
           <BasicActions />
           <CardTitle className="col-span-2 my-3">Permissions</CardTitle>
-          <Button onClick={onRequestPermissions}>Request</Button>
+          <Button onClick={onRequestPermissions} disabled={isRequestingPermissions}>
+            {isRequestingPermissions ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Check on wallet
+              </>
+            ) : (
+              <>Request Permission</>
+            )}
+          </Button>
 
           <CardTitle className="col-span-2 my-3">Donut contract</CardTitle>
-          <Button onClick={onPurchase}>Purchase</Button>
+          <Button onClick={onPurchase} disabled={isPurchasingDonut}>
+            {isPurchasingDonut ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Check on wallet
+              </>
+            ) : (
+              <>Purchase</>
+            )}
+          </Button>
 
           <CardTitle className="col-span-2 my-3">Custom</CardTitle>
           <Button onClick={handleBuildUserOp}> Build UserOp</Button>
