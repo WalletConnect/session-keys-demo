@@ -40,10 +40,9 @@ export default function LocalPrivateKeySection() {
   const { signer, signerPrivateKey } = useLocalSigner()
   const [isRequestPermissionLoading, setRequestPermissionLoading] = useState<boolean>(false)
   const [isTransactionPending, setTransactionPending] = useState<boolean>(false)
-  const [grantPermissions, setGrantPermissions] = useLocalStorageState<GrantPermissionsReturnType | undefined>(
-    GRANTED_PERMISSIONS_KEY,
-    undefined
-  )
+  const [grantPermissions, setGrantPermissions] = useLocalStorageState<
+    GrantPermissionsReturnType | undefined
+  >(GRANTED_PERMISSIONS_KEY, undefined)
   const { toast } = useToast()
 
   const handleTxWithLocalKey = async () => {
@@ -266,9 +265,7 @@ export default function LocalPrivateKeySection() {
                 <div className="grid gap-2 sm:grid-cols-2">
                   <Button
                     disabled={
-                      isRequestPermissionLoading ||
-                      grantPermissions !== undefined ||
-                      !isConnected
+                      isRequestPermissionLoading || grantPermissions !== undefined || !isConnected
                     }
                     onClick={onRequestPermissions}
                   >
