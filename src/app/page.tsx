@@ -24,10 +24,10 @@ export default function Home() {
     <div className="w-3/4 sm:w-1/2 md:w-5/12 flex flex-col gap-3">
       <WalletSection />
       <InfoSection />
-      <LocalPrivateKeySection />
       <PasskeySection />
       {isConnected ? <ActionsSection /> : null}
       <SessionKeySection />
+      <LocalPrivateKeySection />
     </div>
   )
 }
