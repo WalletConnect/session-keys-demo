@@ -16,8 +16,8 @@ import { Loader2 } from 'lucide-react'
 
 export default function ActionsSection() {
   const { toast } = useToast()
-  const [isRequestingPermissions,setRequestingPermissions] = useState(false)
-  const [isPurchasingDonut,setPurchasingDonut] = useState(false)
+  const [isRequestingPermissions, setRequestingPermissions] = useState(false)
+  const [isPurchasingDonut, setPurchasingDonut] = useState(false)
   const { signTypedDataAsync } = useSignTypedData()
   const { writeContractAsync } = useWriteContract()
   const [sessionKey, setSessionKey] = useLocalStorageState<string | undefined>(
