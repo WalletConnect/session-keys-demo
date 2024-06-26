@@ -31,6 +31,7 @@ import { sign } from 'viem/accounts'
 import { sepolia } from 'viem/chains'
 import { Execution } from '@/lib/UserOperationBuilderUtil/types'
 import { UserOperationBuilder } from '@/lib/UserOperationBuilderUtil'
+import { encodeSECP256k1PublicKeyToDID } from '@/utils/CommonUtils'
 
 export default function LocalPrivateKeySection() {
   const { isConnected, connector } = useAccount()
@@ -175,8 +176,8 @@ export default function LocalPrivateKeySection() {
     setRequestPermissionLoading(true)
 
     try {
-      const targetAddress = signer?.address
-      if (!targetAddress) {
+      const targetPublicKey = signer?.publicKey
+      if (!targetPublicKey) {
         throw new Error('Local signer not initialized')
       }
       const _walletClient = createWalletClient({
@@ -209,7 +210,7 @@ export default function LocalPrivateKeySection() {
         signer: {
           type: 'key',
           data: {
-            id: targetAddress
+            id: encodeSECP256k1PublicKeyToDID(targetPublicKey)
           }
         }
       })
