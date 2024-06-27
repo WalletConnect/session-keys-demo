@@ -5,15 +5,15 @@ import { useLocalSigner } from '@/hooks/useLocalSigner'
 import { Button } from '../ui/button'
 import { deserializeSessionKeyAccount } from '@zerodev/session-key'
 import { useToast } from '../ui/use-toast'
-import { bufferToString, createKernelClient, createPublicBundlerClient } from '@/lib/utils'
-import { WalletClient, getContract, parseEther } from 'viem'
+import { createKernelClient, createPublicBundlerClient } from '@/lib/utils'
+import { parseEther, toHex } from 'viem'
 import { donutContractAbi, donutContractaddress } from '@/consts/contract'
 import { useState } from 'react'
-import { signWithPasskey } from '@/core/passkeys'
 import usePasskey from '@/hooks/usePasskey'
 import { removeItem } from '@/core/storage'
 import { ENTRYPOINT_ADDRESS_V06, ENTRYPOINT_ADDRESS_V07 } from 'permissionless'
 import { KERNEL_V2_4 } from '@zerodev/sdk/constants'
+import { sign } from 'webauthn-p256'
 
 export default function SessionKeySection() {
   const [sessionKey, setSessionKey] = useLocalStorageState<string | undefined>(
@@ -22,7 +22,7 @@ export default function SessionKeySection() {
   )
   const [isAsyncActionLoading, setIsAsyncActionLoading] = useState(false)
   const [isSyncActionLoading, setIsSyncActionLoading] = useState(false)
-  const { isPasskeyAvailable } = usePasskey()
+  const { isPasskeyAvailable, passkeyId } = usePasskey()
 
   const { toast } = useToast()
   const { signer } = useLocalSigner()
@@ -74,12 +74,15 @@ export default function SessionKeySection() {
       if (!sessionKey) {
         throw new Error('Session key not available')
       }
-
-      const credential = await signWithPasskey(crypto.getRandomValues(new Uint8Array(32)))
-      console.log('Signing complete', { credential })
-      if (credential) {
-        console.log('Passkey rawId', bufferToString(credential.rawId))
+      if (!isPasskeyAvailable) {
+        throw new Error('Passkey key not available')
       }
+
+      const signature = await sign({
+        credentialId: passkeyId,
+        hash: toHex(crypto.getRandomValues(new Uint8Array(32)))
+      })
+      console.log('Passkey signing complete', { signature })
 
       const publicClient = createPublicBundlerClient()
       const entryPoint = ENTRYPOINT_ADDRESS_V06

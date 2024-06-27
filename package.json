@@ -33,7 +33,8 @@
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
     "viem": "^2.16.2",
-    "wagmi": "2.10.6"
+    "wagmi": "2.10.6",
+    "webauthn-p256": "0.0.1-main.20240626T220049"
   },
   "devDependencies": {
     "@types/node": "^20",
