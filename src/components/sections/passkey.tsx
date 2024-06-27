@@ -1,20 +1,21 @@
 'use client'
 import usePasskey from '@/hooks/usePasskey'
 import { Button } from '../ui/button'
-import { createPasskey, signWithPasskey, toLocalStorageFormat } from '@/core/passkeys'
-import { bufferToString } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { useToast } from '@/components/ui/use-toast'
+import { createCredential, sign } from 'webauthn-p256'
+import { toHex } from 'viem'
 
 export default function PasskeySection() {
-  const { isPasskeyAvailable, setPasskey } = usePasskey()
+  const { isPasskeyAvailable, setPasskey, passkeyId } = usePasskey()
   const { toast } = useToast()
 
   const handleCreatePasskey = async () => {
     try {
-      const passkey = await createPasskey()
-
-      setPasskey(toLocalStorageFormat(passkey))
+      const credential = await createCredential({
+        name: 'Session key'
+      })
+      setPasskey(credential)
       toast({
         title: 'Passkey created succesfully'
       })
@@ -25,11 +26,11 @@ export default function PasskeySection() {
 
   const handleSign = async () => {
     try {
-      const credential = await signWithPasskey(crypto.getRandomValues(new Uint8Array(32)))
-      console.log('Signing complete', { credential })
-      if (credential) {
-        console.log('Passkey rawId', bufferToString(credential.rawId))
-      }
+      const signature = await sign({
+        credentialId: passkeyId,
+        hash: toHex(crypto.getRandomValues(new Uint8Array(32)))
+      })
+      console.log('Signing complete', { signature })
       toast({
         title: 'Signing with passkey successfully completed'
       })
