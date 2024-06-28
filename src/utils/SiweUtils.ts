@@ -39,7 +39,8 @@ const dappPermissions = {
 }
 
 const recap = createRecap(window.location.origin, 'submit transactions with permissons', [
-  JSON.stringify(dappPermissions,bigIntFormatter)])
+  JSON.stringify(dappPermissions, bigIntFormatter)
+])
 
 const encoded = encodeRecap(recap)
 

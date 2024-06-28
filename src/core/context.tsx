@@ -8,6 +8,7 @@ import { createWeb3Modal } from '@web3modal/wagmi/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { State, WagmiProvider } from 'wagmi'
+import { siweConfig } from '@/utils/SiweUtils'
 import { CUSTOM_WALLETS } from '@/consts/provider'
 
 // Setup queryClient
@@ -18,6 +19,7 @@ if (!projectId) throw new Error('Project ID is not defined')
 // Create modal
 createWeb3Modal({
   wagmiConfig: config,
+  siweConfig,
   projectId,
   enableAnalytics: false,
   customWallets: CUSTOM_WALLETS
